@@ -4,7 +4,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 
-# Set a more attractive Seaborn style/theme
 sns.set_theme(style="whitegrid", palette="pastel")
 
 def read_csv_data(filepath):
