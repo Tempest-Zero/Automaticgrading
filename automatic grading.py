@@ -159,6 +159,39 @@ def plot_grade_vs_score(df, grade_col='Grade', score_col='Score',
     ax.set_ylim(0, 100)
     st.pyplot(fig)
 
+def plot_iqr_boxplot(df, col='Score', title='Box Plot - Outliers based on IQR'):
+    """
+    Plots a boxplot based on the IQR for the chosen column,
+    to visualize outliers and how they might be handled.
+    """
+    fig, ax = plt.subplots(figsize=(6,4))
+
+    # Calculate IQR
+    q1 = df[col].quantile(0.25)
+    q3 = df[col].quantile(0.75)
+    iqr = q3 - q1
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+
+    # Annotate the plot with IQR details
+    sns.boxplot(
+        y=df[col],
+        ax=ax,
+        color='skyblue'
+    )
+    ax.axhline(lower_bound, color='red', linestyle='--', label=f'Lower Bound = {lower_bound:.2f}')
+    ax.axhline(upper_bound, color='red', linestyle='--', label=f'Upper Bound = {upper_bound:.2f}')
+    ax.set_title(title)
+    ax.legend()
+
+    st.pyplot(fig)
+
+def convert_df_to_csv(df: pd.DataFrame) -> str:
+    """
+    Convert a DataFrame to CSV for download.
+    """
+    return df.to_csv(index=False)
+
 # -----------------------------
 # Main Streamlit App
 # -----------------------------
@@ -172,6 +205,8 @@ def main():
     3. **View** distribution plots and final grade counts.
     4. **See** a line chart of *Grade vs. Average Score*.
     5. **Check** how many got a specific Grade at each Score.
+    6. **Download** a CSV with final grades.
+    7. **See** an IQR-based boxplot for outliers.
     """)
 
     # 1. File upload
@@ -203,11 +238,15 @@ def main():
         st.write("Grades assigned based on these **absolute thresholds**:")
         st.json(thresholds)
 
-        # Show data
+        # Show data with assigned grades
         st.dataframe(df[["StudentID","Score","Grade"]].head())
 
         # Plot Score Distribution
         plot_distribution(df, col="Score", title="Score Distribution (Absolute)")
+
+        # Boxplot with IQR
+        st.subheader("IQR Boxplot (Absolute Grading)")
+        plot_iqr_boxplot(df, col="Score", title="Outlier Detection via IQR (Absolute)")
 
         # Grade Distribution
         plot_grade_distribution(df, grade_col="Grade", title="Grade Distribution (Absolute)")
@@ -222,19 +261,36 @@ def main():
         )
 
         # Show how many got a specific grade at each score
-        st.subheader("Grade vs. Score Details")
+        st.subheader("Grade vs. Score Details (Absolute)")
         abs_counts = df.groupby(["Grade", "Score"]).size().reset_index(name="Count")
         st.dataframe(abs_counts)
+
+        # Provide a CSV download for final results
+        st.subheader("Download Final Grades (Absolute)")
+        abs_csv = convert_df_to_csv(df[["StudentID","Score","Grade"]])
+        st.download_button(
+            label="Download CSV",
+            data=abs_csv,
+            file_name="absolute_grades.csv",
+            mime="text/csv"
+        )
 
     else:
         st.subheader("Relative Grading")
         df_transformed = transform_scores_normal_curve(df)
         df_grades = assign_letter_grades_from_percentiles(df_transformed, grade_col="FinalGrade")
 
-        st.dataframe(df_grades[["StudentID","Score","AdjustedScore","FinalGrade"]].head())
+        # Let's rename "FinalGrade" -> "Grade" to keep column naming consistent
+        df_grades.rename(columns={"FinalGrade": "Grade"}, inplace=True)
+
+        st.dataframe(df_grades[["StudentID","Score","AdjustedScore","Grade"]].head())
 
         # Plot raw Score distribution
         plot_distribution(df_grades, col="Score", title="Raw Score Distribution (Relative)")
+
+        # Boxplot with IQR
+        st.subheader("IQR Boxplot (Relative Grading)")
+        plot_iqr_boxplot(df_grades, col="Score", title="Outlier Detection via IQR (Relative)")
 
         # Plot Adjusted (z-score) distribution
         st.write("**Adjusted Score (Z-Score) Distribution**")
@@ -251,24 +307,32 @@ def main():
         st.pyplot(fig)
 
         # Grade Distribution
-        plot_grade_distribution(df_grades, grade_col="FinalGrade", 
+        plot_grade_distribution(df_grades, grade_col="Grade", 
                                 title="Final Grade Distribution (Relative)")
 
         # Grade vs. Score Plot
         plot_grade_vs_score(
             df_grades,
-            grade_col="FinalGrade",
+            grade_col="Grade",
             score_col="Score",
             all_grades=["A","B","C","D","F"],
             title="Average Score by Grade (Relative)"
         )
 
         # Show how many got a specific grade at each score
-        st.subheader("Grade vs. Score Details")
-        # We'll rename 'FinalGrade' to 'Grade' for simpler grouping
-        df_grades = df_grades.rename(columns={"FinalGrade": "Grade"})
+        st.subheader("Grade vs. Score Details (Relative)")
         rel_counts = df_grades.groupby(["Grade", "Score"]).size().reset_index(name="Count")
         st.dataframe(rel_counts)
+
+        # Provide a CSV download for final results
+        st.subheader("Download Final Grades (Relative)")
+        rel_csv = convert_df_to_csv(df_grades[["StudentID","Score","AdjustedScore","Grade"]])
+        st.download_button(
+            label="Download CSV",
+            data=rel_csv,
+            file_name="relative_grades.csv",
+            mime="text/csv"
+        )
 
     st.success("Grading and analysis completed successfully!")
 
