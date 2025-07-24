@@ -57,4 +57,4 @@ You can extend it by adding weightages, customizable thresholds, or support for 
 
 This app was created by me as a way to make grading analysis easier and more interactive.
 
-If you'd like to suggest improvements or contribute, feel free to open a pull request or drop me a message.
+If you'd like to suggest improvements or contribute, feel free to open a pull request or drop me a message. ill consider working more on it later in the future hopefully ig so people can use it for meaningful work and actual grading systems hopefully.
